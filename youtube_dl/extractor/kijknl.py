@@ -50,11 +50,26 @@ class KijkNLIE(InfoExtractor):
         #dig a bit down into the json
         parsed_json = json.loads(next_json)
         video_info = parsed_json['props']['pageProps']['video']
-        metadata_info = parsed_json['props']['pageProps']['format']
 
-        # Get some metadata for the program.
-        title = metadata_info['title']
-        description = metadata_info['description']
+        #if the video is a tv program. I think this is how to differentiate
+        if(parsed_json['page'] == "/programmas/format"):
+            type = 'TvShow'
+        elif(parsed_json['page'] == "/movies"):
+            type = 'Movie'
+        else:
+            raise ExtractorError("Unknown page type '%s'. Needs investigation. Exiting" % parsed_json['page'])
+
+        if(type == 'TvShow'):
+            metadata_info = parsed_json['props']['pageProps']['format']
+
+            # Get some metadata for the program.
+            title = metadata_info['title']
+            description = metadata_info['description']
+            seasonNumber = video_info['seasonNumber']
+            episodeNumber = video_info['tvSeasonEpisodeNumber']
+        elif(type == 'Movie'):
+            title = video_info['title']
+            description = video_info['shortDescription']
 
         formats = list()
         subtitles = dict()
@@ -94,7 +109,7 @@ class KijkNLIE(InfoExtractor):
             else:
                 raise ExtractorError("Unknown media url extension '%s' found. Needs investigation. Exiting" % extension)
 
-        return {
+        result = {
             'id': video_id,
             'title': title,
             'description': description,
@@ -102,3 +117,9 @@ class KijkNLIE(InfoExtractor):
             'subtitles': subtitles
             # TODO more properties (see youtube_dl/extractor/common.py)
         }
+
+        if(type == 'TvShow'):
+            result['season_number'] = seasonNumber
+            result['episode_number'] = episodeNumber
+
+        return result
